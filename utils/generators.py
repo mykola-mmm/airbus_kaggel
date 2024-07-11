@@ -4,7 +4,7 @@ from .utils import create_mask
 import numpy as np
 
 from PIL import Image
-from skimage.transform import rescale, resize, downscale_local_mean
+from skimage.transform import resize
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 

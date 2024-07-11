@@ -1,7 +1,5 @@
 import config
 import numpy as np
-from skimage.transform import resize
-
 
 #utility functions
 def rle_to_mask(starts, lengths, height, width):
