@@ -1,5 +1,10 @@
-import config
+import os
+from config import *
 import numpy as np
+import tensorflow as tf
+from PIL import Image
+from skimage.transform import resize
+import matplotlib.pyplot as plt
 
 #utility functions
 def rle_to_mask(starts, lengths, height, width):
@@ -24,3 +29,26 @@ def create_mask(mask_array, width=768, height=768):
         startP, lengthP = [np.array(x, dtype=int) for x in (split[::2], split[1::2])]
         masks += (rle_to_mask(startP, lengthP, width, height))
     return masks
+
+def generate_prediction(model, img_dir, img_name):
+    img = os.path.join(img_dir, img_name)
+    img = Image.open(img)
+    img = np.array(img)
+    img = resize(img, (PATCH_SIZE, PATCH_SIZE), anti_aliasing=True)
+    img = tf.expand_dims(img, axis=0)
+    pred = model.predict(img)
+    print(f"prediction shape - {pred.shape}")
+    return pred, img
+
+def visualise_prediction(model, img_dir, img_name):
+    pred, img = generate_prediction(model, img_dir, img_name)
+    plt.figure(figsize=(10, 10))
+    plt.subplot(1, 2, 1)
+    plt.imshow(img[0])
+    plt.title("Original Image")
+    plt.axis("off")
+    plt.subplot(1, 2, 2)
+    plt.imshow(pred[0])
+    plt.title("Predicted Mask")
+    plt.axis("off")
+    plt.show()
