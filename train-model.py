@@ -71,16 +71,16 @@ earlystopping = EarlyStopping(
     patience=15)
 
 # Check if WEIGHTS_DIR exists, if not create it
-if not os.path.exists(WEIGHTS_DIR):
-    os.makedirs(WEIGHTS_DIR)
+if not os.path.exists(MODEL_DIR):
+    os.makedirs(MODEL_DIR)
 
-weight_path = WEIGHTS_PATH
+model_path = MODEL_PATH
 checkpoint = ModelCheckpoint(
-    filepath=weight_path,
+    filepath=model_path,
     monitor='val_dice_score',
     verbose=1,
     mode='max',
-    save_weights_only=True)
+    save_weights_only=False)
 
 reduceLR = ReduceLROnPlateau(
     monitor='val_dice_score',
@@ -125,9 +125,3 @@ with strategy.scope():
                     epochs=NB_EPOCHS,
                     validation_data=(validation_x, validation_y),
                     callbacks=callbacks)]
-
-    # Check if WEIGHTS_DIR exists, if not create it
-    if not os.path.exists(MODEL_DIR):
-        os.makedirs(MODEL_DIR)
-
-    model.save(MODEL_PATH)
