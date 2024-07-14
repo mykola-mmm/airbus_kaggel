@@ -2,6 +2,7 @@ import os
 
 # model configs
 NUM_SAMPLES = 3000  # not a total number of samples, but max number of samples with the same 'ship_count' 
+VALIDATION_SET_SIZE = 0.1 # number from 0 to 1.0
 GAUSSIAN_NOISE = 0.1
 NB_EPOCHS = 50
 BATCH_SIZE = 64
@@ -23,5 +24,5 @@ MODEL_FILE = 'model.{epoch:02d}-{val_loss:.2f}.keras'
 MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILE)
 
 # model testing configs
-MODEL_TO_TEST = ''
+MODEL_TO_TEST = 'model.30-0.35.keras'
 MODEL_TO_TEST_PATH = os.path.join(MODEL_DIR, MODEL_TO_TEST)

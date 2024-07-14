@@ -1,15 +1,24 @@
+import os
+import random
 from config import *
 from tensorflow import keras
 from utils.losses import *
 from utils.model import *
 from utils.utils import *
 
+# Handpicked images for nice results :)
+handpicked_test_imgs = ['ba6fe8a25.jpg','8dd7d6368.jpg','534e10e90.jpg','711be1fce.jpg','8e6b39bb1.jpg','45d43380c.jpg','2868e5640.jpg','a00886458.jpg','0c2848844.jpg','d9b95022a.jpg','ba9c3d11a.jpg','3566fb758.jpg','abb672b82.jpg','acb7dd8d2.jpg', '30e126c21.jpg']
+
+# choose 100 random images from test directory for unbiased results
+file_names = os.listdir(TEST_IMG_DIR)
+test_imgs = random.sample(file_names, 33)
+
 print(f"MODEL_TO_TEST_PATH - {MODEL_TO_TEST_PATH}")
+
 model = keras.models.load_model(MODEL_TO_TEST_PATH, custom_objects={'dice_bce_loss': dice_bce_loss, "dice_score": dice_score})
-test_imgs = ['8e6b39bb1.jpg','45d43380c.jpg','2868e5640.jpg','a00886458.jpg','0c2848844.jpg','d9b95022a.jpg','ba9c3d11a.jpg','3566fb758.jpg','abb672b82.jpg','acb7dd8d2.jpg', '30e126c21.jpg']
 
-# for img in test_imgs:
-#     prediction = generate_prediction(model, TEST_IMG_DIR, img)
-#     fig.add_subplot(rows, columns, 1)
+for i in handpicked_test_imgs:
+   visualise_prediction(model, TEST_IMG_DIR, i) 
 
-visualise_prediction(model, TEST_IMG_DIR, '8e6b39bb1.jpg')
+for img in test_imgs:
+    visualise_prediction(model, TEST_IMG_DIR, img)

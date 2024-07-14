@@ -50,14 +50,13 @@ for value in value_counts.index:
 balanced_df = balanced_df[balanced_df['ship_count'] > 0]
 
 # Split the balanced dataset into train and validation sets
-train_ids, validation_ids = train_test_split(
-    balanced_df, test_size=0.1, stratify=balanced_df['ship_count'])
+train_ids, validation_ids = train_test_split(balanced_df, test_size=VALIDATION_SET_SIZE, stratify=balanced_df['ship_count'])
 
 train_df = pd.merge(balanced_df, train_ids)
 validation_df = pd.merge(balanced_df, validation_ids)
 
-print(f"train_df:\n {train_df.sample(5)}")
-print(f"validation_df:\n {validation_df.sample(5)}")
+# print(f"train_df:\n {train_df.sample(5)}")
+# print(f"validation_df:\n {validation_df.sample(5)}")
 
 # Create a generator for training data
 train_gen = img_gen(train_df)
@@ -101,11 +100,11 @@ STEP_COUNT = train_df.shape[0] // BATCH_SIZE
 model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE))
 
 # Create a validation set
-VALIDATION_SET_SIZE = (balanced_df.shape[0] - train_df.shape[0])
-validation_x, validation_y = next(img_gen(validation_df, VALIDATION_SET_SIZE, PATCH_SIZE))
+validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
+validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE))
 
 print(f"The size of the training set: {train_df.shape[0]}")
-print(f"The size of the validation set: {VALIDATION_SET_SIZE}")
+print(f"The size of the validation set: {validation_test_size}")
 print(f"Steps/Epoch: {STEP_COUNT}")
 
 # Create a MirroredStrategy for distributed training

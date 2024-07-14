@@ -1,1 +1,3 @@
-./airbus-ship-detection/
+/airbus-ship-detection
+/venv
+*__pycache__*

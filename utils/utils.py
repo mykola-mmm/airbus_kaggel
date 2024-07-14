@@ -25,7 +25,6 @@ def create_mask(mask_array, width=768, height=768):
     # if element == element:
     if isinstance(mask_array, str):
         split = mask_array.split()
-        # print(split)
         startP, lengthP = [np.array(x, dtype=int) for x in (split[::2], split[1::2])]
         masks += (rle_to_mask(startP, lengthP, width, height))
     return masks
