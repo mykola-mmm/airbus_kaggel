@@ -102,103 +102,103 @@ if __name__ == '__main__':
     MIN_LEARNING_RATE = args.min_learning_rate
     OPTIMIZER = args.optimizer
 
-   # Open a strategy scope
-    with strategy.scope():
-        # Check if the chosen optimizer is available
-        if OPTIMIZER == 'adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)
-        elif OPTIMIZER == 'nadam':
-            optimizer = tf.keras.optimizers.Nadam(learning_rate=LEARNING_RATE)
-        elif OPTIMIZER == 'rms':
-            optimizer = tf.keras.optimizers.RMSprop(learning_rate=LEARNING_RATE)
-        else:
-            raise ValueError(f"Invalid optimizer type. Available optimizers are 'adam', 'nadam', and 'rms'.")
+#    # Open a strategy scope
+#     with strategy.scope():
+    # Check if the chosen optimizer is available
+    if OPTIMIZER == 'adam':
+        optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)
+    elif OPTIMIZER == 'nadam':
+        optimizer = tf.keras.optimizers.Nadam(learning_rate=LEARNING_RATE)
+    elif OPTIMIZER == 'rms':
+        optimizer = tf.keras.optimizers.RMSprop(learning_rate=LEARNING_RATE)
+    else:
+        raise ValueError(f"Invalid optimizer type. Available optimizers are 'adam', 'nadam', and 'rms'.")
 
-        # Check if the chosen loss function is available
-        if LOSS_FUNCTION == 'dice_loss':
-            loss_function = dice_loss
-        elif LOSS_FUNCTION == 'bce_loss':
-            loss_function = bce_loss
-        elif LOSS_FUNCTION == 'dice_bce_loss':
-            loss_function = dice_bce_loss
-        elif LOSS_FUNCTION == 'ioe_loss':
-            loss_function = iou_loss
-        else:
-            raise ValueError(f"Invalid loss function. Available loss functions are 'dice_loss', 'bce_loss', 'dice_bce_loss', and 'ioe_loss'.")
+    # Check if the chosen loss function is available
+    if LOSS_FUNCTION == 'dice_loss':
+        loss_function = dice_loss
+    elif LOSS_FUNCTION == 'bce_loss':
+        loss_function = bce_loss
+    elif LOSS_FUNCTION == 'dice_bce_loss':
+        loss_function = dice_bce_loss
+    elif LOSS_FUNCTION == 'ioe_loss':
+        loss_function = iou_loss
+    else:
+        raise ValueError(f"Invalid loss function. Available loss functions are 'dice_loss', 'bce_loss', 'dice_bce_loss', and 'ioe_loss'.")
 
-        balanced_df = prepare_balanced_dataset()
-        train_ids, validation_ids = train_test_split(balanced_df, test_size=VALIDATION_TEST_SIZE, stratify=balanced_df['ship_count'])
+    balanced_df = prepare_balanced_dataset()
+    train_ids, validation_ids = train_test_split(balanced_df, test_size=VALIDATION_TEST_SIZE, stratify=balanced_df['ship_count'])
 
-        train_df = pd.merge(balanced_df, train_ids)
-        validation_df = pd.merge(balanced_df, validation_ids)
+    train_df = pd.merge(balanced_df, train_ids)
+    validation_df = pd.merge(balanced_df, validation_ids)
 
-        # Create an augmented generator for model fitting
-        model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH))
+    # Create an augmented generator for model fitting
+    model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH))
 
-        # Create a validation set
-        validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
-        validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
+    # Create a validation set
+    validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
+    validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
 
-        # Calculate the number of steps per epoch
-        STEP_COUNT = train_df.shape[0] // BATCH_SIZE
+    # Calculate the number of steps per epoch
+    STEP_COUNT = train_df.shape[0] // BATCH_SIZE
 
-        # Define callbacks for training
-        tensorboard = TensorBoard(log_dir='logs')
+    # Define callbacks for training
+    tensorboard = TensorBoard(log_dir='logs')
 
-        earlystopping = EarlyStopping(
-            monitor="val_dice_score",
-            mode="max",
-            patience=15)
+    earlystopping = EarlyStopping(
+        monitor="val_dice_score",
+        mode="max",
+        patience=15)
 
-        # Check if WEIGHTS_DIR exists, if not create it
-        if not os.path.exists(MODEL_DIR):
-            os.makedirs(MODEL_DIR)
+    # Check if WEIGHTS_DIR exists, if not create it
+    if not os.path.exists(MODEL_DIR):
+        os.makedirs(MODEL_DIR)
 
-        # MODEL_FILE = 'model_{PATCH_SIZE}x{PATCH_SIZE}.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
+    # MODEL_FILE = 'model_{PATCH_SIZE}x{PATCH_SIZE}.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
 
-        MODEL_FILE = 'model.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
+    MODEL_FILE = 'model.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
 
-        MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILE)
+    MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILE)
 
-        model_path = MODEL_PATH
-        checkpoint = ModelCheckpoint(
-            filepath=model_path,
-            monitor='val_dice_score',
-            verbose=1,
-            mode='max',
-            save_weights_only=False)
+    model_path = MODEL_PATH
+    checkpoint = ModelCheckpoint(
+        filepath=model_path,
+        monitor='val_dice_score',
+        verbose=1,
+        mode='max',
+        save_weights_only=False)
 
-        reduceLR = ReduceLROnPlateau(
-            monitor='val_dice_score',
-            factor=0.2,
-            patience=3,
-            verbose=1,
-            mode='max',
-            min_delta=0.0001,
-            cooldown=2,
-            min_lr=MIN_LEARNING_RATE)
+    reduceLR = ReduceLROnPlateau(
+        monitor='val_dice_score',
+        factor=0.2,
+        patience=3,
+        verbose=1,
+        mode='max',
+        min_delta=0.0001,
+        cooldown=2,
+        min_lr=MIN_LEARNING_RATE)
 
-        callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
+    callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
 
-        # Create a MirroredStrategy for distributed training
-        strategy = tf.distribute.MirroredStrategy()
-        print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
-        print(f"The size of the training set: {train_df.shape[0]}")
-        print(f"The size of the validation set: {validation_test_size}")
-        print(f"Steps/Epoch: {STEP_COUNT}")
-        print(type(dice_bce_loss))
+    # Create a MirroredStrategy for distributed training
+    strategy = tf.distribute.MirroredStrategy()
+    print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+    print(f"The size of the training set: {train_df.shape[0]}")
+    print(f"The size of the validation set: {validation_test_size}")
+    print(f"Steps/Epoch: {STEP_COUNT}")
+    print(type(dice_bce_loss))
 
+
+    # Create the model using the unet function
+    model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=dice_bce_loss, metrics=['accuracy', dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
+    model.summary()
     
-        # Create the model using the unet function
-        model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=dice_bce_loss, metrics=['accuracy', dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
-        model.summary()
-        
-        # Train the model on all available devices
-        loss_history = [model.fit(model_fit_gen,
-                                    steps_per_epoch=STEP_COUNT,
-                                    epochs=EPOCHS,
-                                    validation_data=(validation_x, validation_y),
-                                    callbacks=callbacks)]
+    # Train the model on all available devices
+    loss_history = [model.fit(model_fit_gen,
+                                steps_per_epoch=STEP_COUNT,
+                                epochs=EPOCHS,
+                                validation_data=(validation_x, validation_y),
+                                callbacks=callbacks)]
 
 
 
