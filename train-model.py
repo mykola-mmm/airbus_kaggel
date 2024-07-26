@@ -12,44 +12,8 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, ReduceLROnPlateau
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Train a U-Net model for ship detection.')
-    parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training')
-    parser.add_argument('--epochs', type=int, default=50, help='Number of training epochs')
-    parser.add_argument('--max_number_of_samples', type=int, default=5000, help='Max number of samples')
-    parser.add_argument('--validation_test_size', type=float, default=0.2, help='Validation test set size, expected value - float from [0: 1]')
-    parser.add_argument('--dropout', type=float, default=0.1, help='Dropout coefficient')
-    parser.add_argument('--gaussian_noise', type=float, default=0.1, help='Standard deviation of Gaussian noise')
-    parser.add_argument('--num_filters', type=int, default=16, help='Number of filters for convolutional layers')
-    parser.add_argument('--dataset_path', type=str, default='airbus-ship-detection/train_v2', help='Path to the dataset')
-    parser.add_argument('--csv_file', type=str, default='airbus-ship-detection/dataset.csv', help='Path to the CSV file')
-    parser.add_argument('--patch_size', type=int, default=256, help='Size of the patches used for model training')
-    parser.add_argument('--model_dir', type=str, default='models', help='Directory where models will be saved')
-    # not implemented
-    parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
-    parser.add_argument('--loss_function', type=str, default='dice_bce_loss', help='Loss function for training')
-    parser.add_argument('--optimizer', type=str, default='adam', help='Optimizer type')
-
-    return parser.parse_args()
-
-if __name__ == '__main__':
-    # Create variables for each argument
-    args = parse_args()
-    BATCH_SIZE = args.batch_size
-    PATCH_SIZE = args.patch_size
-    INPUT_DATA_DIM = (PATCH_SIZE, PATCH_SIZE, 3)
-    EPOCHS = args.epochs
-    LEARNING_RATE = args.learning_rate
-    MAX_NUMBER_OF_SAMPLES = args.max_number_of_samples
-    VALIDATION_TEST_SIZE = args.validation_test_size
-    DROPOUT = args.dropout
-    GAUSSIAN_NOISE = args.gaussian_noise
-    DATASET_PATH = args.dataset_path
-    CSV_FILE = args.csv_file
-    LOSS_FUNCTION = args.loss_function
-    MODEL_DIR = args.model_dir
-    NUM_FILTERS = args.num_filters
-
+# Function to do final processing of the dataset and balance it
+def prepare_balanced_dataset():
     # Read preprocessed dataset
     df = pd.read_csv(CSV_FILE)
 
@@ -95,15 +59,76 @@ if __name__ == '__main__':
                 samples.append(bin_df.sample(n=len(bin_df), replace=False))
 
     balanced_df = pd.concat(samples).reset_index(drop=True)
+    return balanced_df
 
-    # Split the balanced dataset into train and validation sets
+# Function to parse arguments
+def parse_args():
+    parser = argparse.ArgumentParser(description='Train a U-Net model for ship detection.')
+    parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training')
+    parser.add_argument('--epochs', type=int, default=50, help='Number of training epochs')
+    parser.add_argument('--max_number_of_samples', type=int, default=5000, help='Max number of samples')
+    parser.add_argument('--validation_test_size', type=float, default=0.2, help='Validation test set size, expected value - float from [0: 1]')
+    parser.add_argument('--dropout', type=float, default=0.1, help='Dropout coefficient')
+    parser.add_argument('--gaussian_noise', type=float, default=0.1, help='Standard deviation of Gaussian noise')
+    parser.add_argument('--num_filters', type=int, default=16, help='Number of filters for convolutional layers')
+    parser.add_argument('--dataset_path', type=str, default='airbus-ship-detection/train_v2', help='Path to the dataset')
+    parser.add_argument('--csv_file', type=str, default='airbus-ship-detection/dataset.csv', help='Path to the CSV file')
+    parser.add_argument('--patch_size', type=int, default=768, help='Size to which training images will be resized')
+    parser.add_argument('--model_dir', type=str, default='models', help='Directory where models will be saved')
+    parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--min_learning_rate', type=float, default=1e-6, help='Minimum learning rate')
+    parser.add_argument('--optimizer', type=str, default='adam', help='Optimizer type')
+    parser.add_argument('--loss_function', type=str, default='dice_loss', help='Loss function for training')
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    # Create variables for each argument
+    args = parse_args()
+    BATCH_SIZE = args.batch_size
+    PATCH_SIZE = args.patch_size
+    INPUT_DATA_DIM = (PATCH_SIZE, PATCH_SIZE, 3)
+    EPOCHS = args.epochs
+    LEARNING_RATE = args.learning_rate
+    MAX_NUMBER_OF_SAMPLES = args.max_number_of_samples
+    VALIDATION_TEST_SIZE = args.validation_test_size
+    DROPOUT = args.dropout
+    GAUSSIAN_NOISE = args.gaussian_noise
+    DATASET_PATH = args.dataset_path
+    CSV_FILE = args.csv_file
+    LOSS_FUNCTION = args.loss_function
+    MODEL_DIR = args.model_dir
+    NUM_FILTERS = args.num_filters
+    LEARNING_RATE = args.learning_rate
+    MIN_LEARNING_RATE = args.min_learning_rate
+    OPTIMIZER = args.optimizer
+
+    # Check if the chosen optimizer is available
+    if OPTIMIZER == 'adam':
+        optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)
+    elif OPTIMIZER == 'nadam':
+        optimizer = tf.keras.optimizers.Nadam(learning_rate=LEARNING_RATE)
+    elif OPTIMIZER == 'rms':
+        optimizer = tf.keras.optimizers.RMSprop(learning_rate=LEARNING_RATE)
+    else:
+        raise ValueError(f"Invalid optimizer type. Available optimizers are 'adam', 'nadam', and 'rms'.")
+
+    # Check if the chosen loss function is available
+    if LOSS_FUNCTION == 'dice_loss':
+        loss_function = dice_loss
+    elif LOSS_FUNCTION == 'bce_loss':
+        loss_function = bce_loss
+    elif LOSS_FUNCTION == 'dice_bce_loss':
+        loss_function = dice_bce_loss
+    elif LOSS_FUNCTION == 'ioe_loss':
+        loss_function = iou_loss
+    else:
+        raise ValueError(f"Invalid loss function. Available loss functions are 'dice_loss', 'bce_loss', 'dice_bce_loss', and 'ioe_loss'.")
+
+    balanced_df = prepare_balanced_dataset()
     train_ids, validation_ids = train_test_split(balanced_df, test_size=VALIDATION_TEST_SIZE, stratify=balanced_df['ship_count'])
 
     train_df = pd.merge(balanced_df, train_ids)
     validation_df = pd.merge(balanced_df, validation_ids)
-
-    print(f"train_df:\n {train_df.sample(5)}")
-    print(f"validation_df:\n {validation_df.sample(5)}")
 
     # Create an augmented generator for model fitting
     model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH))
@@ -114,9 +139,6 @@ if __name__ == '__main__':
 
     # Calculate the number of steps per epoch
     STEP_COUNT = train_df.shape[0] // BATCH_SIZE
-
-
-    # init the model
 
     # Define callbacks for training
     tensorboard = TensorBoard(log_dir='logs')
@@ -149,7 +171,7 @@ if __name__ == '__main__':
         mode='max',
         min_delta=0.0001,
         cooldown=2,
-        min_lr=1e-6)
+        min_lr=MIN_LEARNING_RATE)
 
     callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
 
@@ -164,7 +186,7 @@ if __name__ == '__main__':
     # Open a strategy scope
     with strategy.scope():
         # Create the model using the unet function
-        model = unet(INPUT_DATA_DIM, optimizer='adam', loss=dice_bce_loss, metrics=[dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
+        model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=dice_bce_loss, metrics=['accuracy', dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
         model.summary()
         
         # Train the model on all available devices
