@@ -152,7 +152,10 @@ if __name__ == '__main__':
     if not os.path.exists(MODEL_DIR):
         os.makedirs(MODEL_DIR)
 
-    MODEL_FILE = 'model_{PATCH_SIZE}x{PATCH_SIZE}.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
+    # MODEL_FILE = 'model_{PATCH_SIZE}x{PATCH_SIZE}.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
+
+    MODEL_FILE = 'model.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
+
     MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILE)
 
     model_path = MODEL_PATH
