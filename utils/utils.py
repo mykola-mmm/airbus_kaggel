@@ -29,18 +29,18 @@ def create_mask(mask_array, width=768, height=768):
         masks += (rle_to_mask(startP, lengthP, width, height))
     return masks
 
-def generate_prediction(model, img_dir, img_name):
+def generate_prediction(model, patch_size, img_dir, img_name):
     img = os.path.join(img_dir, img_name)
     img = Image.open(img)
     img = np.array(img)
-    img = resize(img, (PATCH_SIZE, PATCH_SIZE), anti_aliasing=True)
+    img = resize(img, (patch_size, patch_size), anti_aliasing=True)
     img = tf.expand_dims(img, axis=0)
     pred = model.predict(img)
     print(f"prediction shape - {pred.shape}")
     return pred, img
 
-def visualise_prediction(model, img_dir, img_name):
-    pred, img = generate_prediction(model, img_dir, img_name)
+def visualise_prediction(model, patch_size, img_dir, img_name):
+    pred, img = generate_prediction(model, patch_size, img_dir, img_name)
     plt.figure(figsize=(10, 10))
     plt.subplot(1, 2, 1)
     plt.imshow(img[0])

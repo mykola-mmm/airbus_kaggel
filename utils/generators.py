@@ -1,21 +1,19 @@
-from config import *
-from .utils import create_mask
-
+import os
 import numpy as np
-
+from .utils import create_mask
 from PIL import Image
 from skimage.transform import resize
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
-def img_gen(input_df, batch_size = BATCH_SIZE, patch_size = PATCH_SIZE):
+def img_gen(input_df, batch_size, patch_size, train_img_dir):
     # shuffle the dataset
     input_df = input_df.sample(frac=1, random_state=42).reset_index(drop=True)
     out_rgb = []
     out_mask = []
     while True:
         for index, row in input_df.iterrows():
-            rgb_path = os.path.join(TRAIN_IMG_DIR, row.ImageId)
+            rgb_path = os.path.join(train_img_dir, row.ImageId)
             rgb = Image.open(rgb_path)
             rgb = np.array(rgb)/255.0
             rgb = resize(rgb, (patch_size, patch_size), anti_aliasing=True)
