@@ -1,5 +1,4 @@
 import os
-from config import *
 import numpy as np
 import tensorflow as tf
 from PIL import Image
