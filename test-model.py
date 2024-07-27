@@ -8,10 +8,6 @@ from utils.model import *
 from utils.utils import *
 
 
-
-
-
-
 def parse_args():
    parser = argparse.ArgumentParser(description='Train a U-Net model for ship detection.')
    parser.add_argument('--model_path', type=str, help='Path to the trained model')
@@ -24,14 +20,6 @@ def parse_args():
 
 
 if __name__ == "__main__":
-   # Detect if running in a Jupyter Notebook
-   try:
-      if 'IPython' in globals():
-         if IPython.get_ipython().__class__.__name__ == 'ZMQInteractiveShell':
-               get_ipython().run_line_magic('matplotlib', 'inline')
-   except NameError:
-      pass
-
    args = parse_args()
    MODEL_PATH = args.model_path
    TEST_DATA_PATH = args.test_data_path
