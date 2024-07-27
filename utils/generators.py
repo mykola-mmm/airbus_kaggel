@@ -16,8 +16,9 @@ def img_gen(input_df, batch_size, patch_size, train_img_dir):
             rgb_path = os.path.join(train_img_dir, row.ImageId)
             rgb = Image.open(rgb_path)
             rgb = np.array(rgb)/255.0
+            width, height, _ = rgb.shape
             rgb = resize(rgb, (patch_size, patch_size), anti_aliasing=True)
-            mask = create_mask(row.AllEncodedPixels)
+            mask = create_mask(row.AllEncodedPixels, width, height)
             mask = resize(mask, (patch_size, patch_size), anti_aliasing=True)
 #             the next line is 'kostyl' to address min/max mask values beeing equal to 0.0/3.051851e-05
             mask = np.where(mask > 0, 1, 0)

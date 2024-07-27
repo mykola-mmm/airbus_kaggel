@@ -19,7 +19,7 @@ def rle_to_mask(starts, lengths, height, width):
     mask = mask.T
     return mask
 
-def create_mask(mask_array, width=768, height=768):
+def create_mask(mask_array, width, height):
     masks = np.zeros((width, height), dtype=np.int16)
     # if element == element:
     if isinstance(mask_array, str):
