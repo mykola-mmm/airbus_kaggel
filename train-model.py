@@ -12,6 +12,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, ReduceLROnPlateau
 
+
 # Function to do final processing of the dataset and balance it
 def prepare_balanced_dataset():
     # Read preprocessed dataset
