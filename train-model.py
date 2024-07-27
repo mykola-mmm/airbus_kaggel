@@ -38,7 +38,7 @@ def prepare_balanced_dataset():
     }).reset_index()
 
     # Divide mask_size into bins with equal number of samples
-    num_bins_mask_size = 100
+    num_bins_mask_size = 73
     df['mask_size_bins'] = pd.qcut(df['mask_size'], num_bins_mask_size, labels=False, duplicates='drop')
 
     # Calculate the total number of unique ship counts and mask sizes
@@ -77,10 +77,16 @@ def parse_args():
     parser.add_argument('--patch_size', type=int, default=768, help='Size to which training images will be resized')
     parser.add_argument('--model_dir', type=str, default='models', help='Directory where models will be saved')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
-    parser.add_argument('--min_learning_rate', type=float, default=1e-6, help='Minimum learning rate')
     parser.add_argument('--optimizer', type=str, default='adam', help='Optimizer type')
     parser.add_argument('--loss_function', type=str, default='dice_loss', help='Loss function for training')
+    parser.add_argument('--early_stopping_patience', type=int, default=15, help='Patience for early stopping')
+    parser.add_argument('--reduce_lr_factor', type=float, default=0.2, help='Factor by which the learning rate will be reduced')
+    parser.add_argument('--reduce_lr_patience', type=int, default=3, help='Number of epochs with no improvement after which learning rate will be reduced')
+    parser.add_argument('--reduce_lr_min_delta', type=float, default=0.0001, help='Minimum change in the monitored quantity to qualify as an improvement')
+    parser.add_argument('--reduce_lr_cooldown', type=int, default=2, help='Number of epochs to wait before resuming normal operation after lr has been reduced')
+    parser.add_argument('--reduce_lr_min_lr', type=float, default=1e-6, help='Lower bound on the learning rate')
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     # Create variables for each argument
@@ -99,15 +105,13 @@ if __name__ == '__main__':
     MODEL_DIR = args.model_dir
     NUM_FILTERS = args.num_filters
     LEARNING_RATE = args.learning_rate
-    MIN_LEARNING_RATE = args.min_learning_rate
     OPTIMIZER = args.optimizer
-
-    # # Create a MirroredStrategy for distributed training
-    # strategy = tf.distribute.MirroredStrategy()
-    # print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
-
-    # # Open a strategy scope
-    # with strategy.scope():
+    EARLY_STOPPING_PATIENCE = args.early_stopping_patience
+    REDUCE_LR_FACTOR = args.reduce_lr_factor
+    REDUCE_LR_PATIENCE = args.reduce_lr_patience
+    REDUCE_LR_MIN_DELTA = args.reduce_lr_min_delta
+    REDUCE_LR_COOLDOWN = args.reduce_lr_cooldown
+    REDUCE_LR_MIN_LR = args.reduce_lr_min_lr
 
     # Check if the chosen optimizer is available
     if OPTIMIZER == 'adam':
@@ -153,7 +157,7 @@ if __name__ == '__main__':
     earlystopping = EarlyStopping(
         monitor="val_dice_score",
         mode="max",
-        patience=15)
+        patience=EARLY_STOPPING_PATIENCE)
 
     # Check if WEIGHTS_DIR exists, if not create it
     if not os.path.exists(MODEL_DIR):
@@ -175,13 +179,13 @@ if __name__ == '__main__':
 
     reduceLR = ReduceLROnPlateau(
         monitor='val_dice_score',
-        factor=0.2,
-        patience=3,
+        factor=REDUCE_LR_FACTOR,
+        patience=REDUCE_LR_PATIENCE,
         verbose=1,
         mode='max',
-        min_delta=0.0001,
-        cooldown=2,
-        min_lr=MIN_LEARNING_RATE)
+        min_delta=REDUCE_LR_MIN_DELTA,
+        cooldown=REDUCE_LR_COOLDOWN,
+        min_lr=REDUCE_LR_MIN_LR)
 
     callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
 
