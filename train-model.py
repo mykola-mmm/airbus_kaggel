@@ -89,7 +89,6 @@ if __name__ == '__main__':
     PATCH_SIZE = args.patch_size
     INPUT_DATA_DIM = (PATCH_SIZE, PATCH_SIZE, 3)
     EPOCHS = args.epochs
-    LEARNING_RATE = args.learning_rate
     MAX_NUMBER_OF_SAMPLES = args.max_number_of_samples
     VALIDATION_TEST_SIZE = args.validation_test_size
     DROPOUT = args.dropout
@@ -103,234 +102,103 @@ if __name__ == '__main__':
     MIN_LEARNING_RATE = args.min_learning_rate
     OPTIMIZER = args.optimizer
 
-#    # Open a strategy scope
-#     with strategy.scope():
-    # Check if the chosen optimizer is available
-    if OPTIMIZER == 'adam':
-        optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)
-    elif OPTIMIZER == 'nadam':
-        optimizer = tf.keras.optimizers.Nadam(learning_rate=LEARNING_RATE)
-    elif OPTIMIZER == 'rms':
-        optimizer = tf.keras.optimizers.RMSprop(learning_rate=LEARNING_RATE)
-    else:
-        raise ValueError(f"Invalid optimizer type. Available optimizers are 'adam', 'nadam', and 'rms'.")
-
-    # Check if the chosen loss function is available
-    if LOSS_FUNCTION == 'dice_loss':
-        loss_function = dice_loss
-    elif LOSS_FUNCTION == 'bce_loss':
-        loss_function = bce_loss
-    elif LOSS_FUNCTION == 'dice_bce_loss':
-        loss_function = dice_bce_loss
-    elif LOSS_FUNCTION == 'ioe_loss':
-        loss_function = iou_loss
-    else:
-        raise ValueError(f"Invalid loss function. Available loss functions are 'dice_loss', 'bce_loss', 'dice_bce_loss', and 'ioe_loss'.")
-
-    balanced_df = prepare_balanced_dataset()
-    train_ids, validation_ids = train_test_split(balanced_df, test_size=VALIDATION_TEST_SIZE, stratify=balanced_df['ship_count'])
-
-    train_df = pd.merge(balanced_df, train_ids)
-    validation_df = pd.merge(balanced_df, validation_ids)
-
-    # Create an augmented generator for model fitting
-    model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH))
-
-    # Create a validation set
-    validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
-    validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
-
-    # Calculate the number of steps per epoch
-    STEP_COUNT = train_df.shape[0] // BATCH_SIZE
-
-    # Define callbacks for training
-    tensorboard = TensorBoard(log_dir='logs')
-
-    earlystopping = EarlyStopping(
-        monitor="val_dice_score",
-        mode="max",
-        patience=15)
-
-    # Check if WEIGHTS_DIR exists, if not create it
-    if not os.path.exists(MODEL_DIR):
-        os.makedirs(MODEL_DIR)
-
-    # MODEL_FILE = 'model_{PATCH_SIZE}x{PATCH_SIZE}.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
-
-    MODEL_FILE = 'model.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
-
-    MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILE)
-
-    model_path = MODEL_PATH
-    checkpoint = ModelCheckpoint(
-        filepath=model_path,
-        monitor='val_dice_score',
-        verbose=1,
-        mode='max',
-        save_weights_only=False)
-
-    reduceLR = ReduceLROnPlateau(
-        monitor='val_dice_score',
-        factor=0.2,
-        patience=3,
-        verbose=1,
-        mode='max',
-        min_delta=0.0001,
-        cooldown=2,
-        min_lr=MIN_LEARNING_RATE)
-
-    callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
-
     # Create a MirroredStrategy for distributed training
     strategy = tf.distribute.MirroredStrategy()
     print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
-    print(f"The size of the training set: {train_df.shape[0]}")
-    print(f"The size of the validation set: {validation_test_size}")
-    print(f"Steps/Epoch: {STEP_COUNT}")
-    print(type(dice_bce_loss))
 
+    # Open a strategy scope
+    with strategy.scope():
 
-    # Create the model using the unet function
-    model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=dice_bce_loss, metrics=['accuracy', dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
-    model.summary()
-    
-    # Train the model on all available devices
-    loss_history = [model.fit(model_fit_gen,
-                                steps_per_epoch=STEP_COUNT,
-                                epochs=EPOCHS,
-                                validation_data=(validation_x, validation_y),
-                                callbacks=callbacks)]
+        # Check if the chosen optimizer is available
+        if OPTIMIZER == 'adam':
+            optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)
+        elif OPTIMIZER == 'nadam':
+            optimizer = tf.keras.optimizers.Nadam(learning_rate=LEARNING_RATE)
+        elif OPTIMIZER == 'rms':
+            optimizer = tf.keras.optimizers.RMSprop(learning_rate=LEARNING_RATE)
+        else:
+            raise ValueError(f"Invalid optimizer type. Available optimizers are 'adam', 'nadam', and 'rms'.")
 
+        # Check if the chosen loss function is available
+        if LOSS_FUNCTION == 'dice_loss':
+            loss_function = dice_loss
+        elif LOSS_FUNCTION == 'bce_loss':
+            loss_function = bce_loss
+        elif LOSS_FUNCTION == 'dice_bce_loss':
+            loss_function = dice_bce_loss
+        elif LOSS_FUNCTION == 'ioe_loss':
+            loss_function = iou_loss
+        else:
+            raise ValueError(f"Invalid loss function. Available loss functions are 'dice_loss', 'bce_loss', 'dice_bce_loss', and 'ioe_loss'.")
 
+        balanced_df = prepare_balanced_dataset()
+        train_ids, validation_ids = train_test_split(balanced_df, test_size=VALIDATION_TEST_SIZE, stratify=balanced_df['ship_count'])
 
+        train_df = pd.merge(balanced_df, train_ids)
+        validation_df = pd.merge(balanced_df, validation_ids)
 
+        # Create an augmented generator for model fitting
+        model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH))
 
+        # Create a validation set
+        validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
+        validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
 
+        # Calculate the number of steps per epoch
+        STEP_COUNT = train_df.shape[0] // BATCH_SIZE
 
+        # Define callbacks for training
+        tensorboard = TensorBoard(log_dir='logs')
 
-# import os
-# from config import *
-# from utils.generators import *
-# from utils.losses import *
-# from utils.model import *
-# from utils.utils import *
-# import pandas as pd
-# import numpy as np
-# import tensorflow as tf
-# from sklearn.utils import resample
-# from sklearn.model_selection import train_test_split
-# from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, ReduceLROnPlateau
+        earlystopping = EarlyStopping(
+            monitor="val_dice_score",
+            mode="max",
+            patience=15)
 
+        # Check if WEIGHTS_DIR exists, if not create it
+        if not os.path.exists(MODEL_DIR):
+            os.makedirs(MODEL_DIR)
 
-# # Read dataset
-# df = pd.read_csv(TRAIN_DATASET_CSV)
+        # MODEL_FILE = 'model_{PATCH_SIZE}x{PATCH_SIZE}.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
 
-# # Add info about whether a ship is present in the image
-# df['has_ship'] = df['EncodedPixels'].apply(lambda x: 0 if pd.isna(x) else 1)
+        MODEL_FILE = 'model.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
 
-# # Add info about the total number of ships in the image
-# df['ship_count'] = df.groupby('ImageId')['EncodedPixels'].transform('count')
+        MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILE)
 
-# # Concatenate all EncodedPixels into AllEncodedPixels
-# df['AllEncodedPixels'] = df.groupby('ImageId')['EncodedPixels'].transform(
-#     lambda x: np.nan if x.isna().all() else ' '.join(filter(None, x))
-# )
+        model_path = MODEL_PATH
+        checkpoint = ModelCheckpoint(
+            filepath=model_path,
+            monitor='val_dice_score',
+            verbose=1,
+            mode='max',
+            save_weights_only=False)
 
-# # Remove duplicate images
-# df = df.drop_duplicates(subset='ImageId', keep='first')
+        reduceLR = ReduceLROnPlateau(
+            monitor='val_dice_score',
+            factor=0.2,
+            patience=3,
+            verbose=1,
+            mode='max',
+            min_delta=0.0001,
+            cooldown=2,
+            min_lr=MIN_LEARNING_RATE)
 
-# # Delete EncodedPixels column
-# df = df.drop(columns=['EncodedPixels'])
+        callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
 
-# # Reset indexes
-# df = df.reset_index(drop=True)
+        # Create a MirroredStrategy for distributed training
+        strategy = tf.distribute.MirroredStrategy()
+        print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+        print(f"The size of the training set: {train_df.shape[0]}")
+        print(f"The size of the validation set: {validation_test_size}")
+        print(f"Steps/Epoch: {STEP_COUNT}")
 
-# # Create a DataFrame to store the balanced dataset
-# balanced_df = pd.DataFrame()
-
-# # Create a balanced dataset
-# value_counts = df['ship_count'].value_counts()
-# for value in value_counts.index:
-#     subset = df[df['ship_count'] == value]
-#     number_samples = NUM_SAMPLES if NUM_SAMPLES < len(subset) else len(subset)
-#     resampled_subset = resample(subset, replace=False, n_samples=number_samples, random_state=42)
-#     balanced_df = pd.concat([balanced_df, resampled_subset])
-
-# # Drop images without ships
-# balanced_df = balanced_df[balanced_df['ship_count'] > 0]
-
-# # Split the balanced dataset into train and validation sets
-# train_ids, validation_ids = train_test_split(balanced_df, test_size=VALIDATION_SET_SIZE, stratify=balanced_df['ship_count'])
-
-# train_df = pd.merge(balanced_df, train_ids)
-# validation_df = pd.merge(balanced_df, validation_ids)
-
-# # print(f"train_df:\n {train_df.sample(5)}")
-# # print(f"validation_df:\n {validation_df.sample(5)}")
-
-# # Create a generator for training data
-# train_gen = img_gen(train_df)
-
-# # Define callbacks for training
-# tensorboard = TensorBoard(log_dir='logs')
-
-# earlystopping = EarlyStopping(
-#     monitor="val_dice_score",
-#     mode="max",
-#     patience=15)
-
-# # Check if WEIGHTS_DIR exists, if not create it
-# if not os.path.exists(MODEL_DIR):
-#     os.makedirs(MODEL_DIR)
-
-# model_path = MODEL_PATH
-# checkpoint = ModelCheckpoint(
-#     filepath=model_path,
-#     monitor='val_dice_score',
-#     verbose=1,
-#     mode='max',
-#     save_weights_only=False)
-
-# reduceLR = ReduceLROnPlateau(
-#     monitor='val_dice_score',
-#     factor=0.2,
-#     patience=3,
-#     verbose=1,
-#     mode='max',
-#     min_delta=0.0001,
-#     cooldown=2,
-#     min_lr=1e-6)
-
-# callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
-
-# # Calculate the number of steps per epoch
-# STEP_COUNT = train_df.shape[0] // BATCH_SIZE
-
-# # Create an augmented generator for model fitting
-# model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE))
-
-# # Create a validation set
-# validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
-# validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE))
-
-# print(f"The size of the training set: {train_df.shape[0]}")
-# print(f"The size of the validation set: {validation_test_size}")
-# print(f"Steps/Epoch: {STEP_COUNT}")
-
-# # Create a MirroredStrategy for distributed training
-# strategy = tf.distribute.MirroredStrategy()
-# print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
-
-# # Open a strategy scope
-# with strategy.scope():
-#     # Create the model using the unet function
-#     model = unet(INPUT_DATA_DIM, optimizer='adam', loss=dice_bce_loss, metrics=[dice_score])
-#     model.summary()
-    
-#     # Train the model on all available devices
-#     loss_history = [model.fit(
-#                     model_fit_gen,
-#                     steps_per_epoch=STEP_COUNT,
-#                     epochs=NB_EPOCHS,
-#                     validation_data=(validation_x, validation_y),
-#                     callbacks=callbacks)]
+        # Create the model using the unet function
+        model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=loss_function, metrics=['accuracy', dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
+        model.summary()
+        
+        # Train the model on all available devices
+        model.fit(model_fit_gen,
+                  steps_per_epoch=STEP_COUNT,
+                  epochs=EPOCHS,
+                  validation_data=(validation_x, validation_y),
+                  callbacks=callbacks)
