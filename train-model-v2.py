@@ -7,6 +7,7 @@ from utils.generators import *
 from utils.losses import *
 from utils.model import *
 from utils.utils import *
+from utils.DataGenerator import DataGenerator
 from sklearn.utils import resample
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
@@ -94,6 +95,7 @@ if __name__ == '__main__':
     BATCH_SIZE = args.batch_size
     PATCH_SIZE = args.patch_size
     INPUT_DATA_DIM = (PATCH_SIZE, PATCH_SIZE, 3)
+    TRAINING_IMAGE_SIZE = (PATCH_SIZE, PATCH_SIZE)
     EPOCHS = args.epochs
     MAX_NUMBER_OF_SAMPLES = args.max_number_of_samples
     VALIDATION_TEST_SIZE = args.validation_test_size
@@ -113,103 +115,114 @@ if __name__ == '__main__':
     REDUCE_LR_COOLDOWN = args.reduce_lr_cooldown
     REDUCE_LR_MIN_LR = args.reduce_lr_min_lr
 
-    # # Set up MirroredStrategy
-    # strategy = tf.distribute.MirroredStrategy()
-    # print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+    #TODO: Add later
+    # BATCH_SIZE_PER_REPLICA = 64
+    # BATCH_SIZE = BATCH_SIZE_PER_REPLICA * strategy.num_replicas_in_sync
 
-    # # Open strategy scope
-    # with strategy.scope():
-
-
-    # Check if the chosen optimizer is available
-    if OPTIMIZER == 'adam':
-        optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)
-    elif OPTIMIZER == 'nadam':
-        optimizer = tf.keras.optimizers.Nadam(learning_rate=LEARNING_RATE)
-    elif OPTIMIZER == 'rms':
-        optimizer = tf.keras.optimizers.RMSprop(learning_rate=LEARNING_RATE)
-    else:
-        raise ValueError(f"Invalid optimizer type. Available optimizers are 'adam', 'nadam', and 'rms'.")
-
-    # Check if the chosen loss function is available
-    if LOSS_FUNCTION == 'dice_loss':
-        loss_function = dice_loss
-    elif LOSS_FUNCTION == 'bce_loss':
-        loss_function = bce_loss
-    elif LOSS_FUNCTION == 'dice_bce_loss':
-        loss_function = dice_bce_loss
-    elif LOSS_FUNCTION == 'ioe_loss':
-        loss_function = iou_loss
-    else:
-        raise ValueError(f"Invalid loss function. Available loss functions are 'dice_loss', 'bce_loss', 'dice_bce_loss', and 'ioe_loss'.")
-
-    balanced_df = prepare_balanced_dataset()
-    train_ids, validation_ids = train_test_split(balanced_df, test_size=VALIDATION_TEST_SIZE, stratify=balanced_df['ship_count'])
-
-    train_df = pd.merge(balanced_df, train_ids)
-    validation_df = pd.merge(balanced_df, validation_ids)
-
-    # Create an augmented generator for model fitting
-    model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH, random_seed=42))
-
-    exit(1)
-    # Create a validation set
-    validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
-    validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
-
-    # Calculate the number of steps per epoch
-    STEP_COUNT = train_df.shape[0] // BATCH_SIZE
-
-    # Define callbacks for training
-    tensorboard = TensorBoard(log_dir='logs')
-
-    earlystopping = EarlyStopping(
-        monitor="val_dice_score",
-        mode="max",
-        patience=EARLY_STOPPING_PATIENCE)
-
-    # Check if WEIGHTS_DIR exists, if not create it
-    if not os.path.exists(MODEL_DIR):
-        os.makedirs(MODEL_DIR)
-
-    MODEL_FILE = 'model.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
-
-    MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILE)
-
-    model_path = MODEL_PATH
-    checkpoint = ModelCheckpoint(
-        filepath=model_path,
-        monitor='val_dice_score',
-        verbose=1,
-        mode='max',
-        save_weights_only=False)
-
-    reduceLR = ReduceLROnPlateau(
-        monitor='val_dice_score',
-        factor=REDUCE_LR_FACTOR,
-        patience=REDUCE_LR_PATIENCE,
-        verbose=1,
-        mode='max',
-        min_delta=REDUCE_LR_MIN_DELTA,
-        cooldown=REDUCE_LR_COOLDOWN,
-        min_lr=REDUCE_LR_MIN_LR)
-
-    callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
-
-    # Create a MirroredStrategy for distributed training
+    # Set up MirroredStrategy
     strategy = tf.distribute.MirroredStrategy()
     print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
-    print(f"The size of the training set: {train_df.shape[0]}")
-    print(f"The size of the validation set: {validation_test_size}")
-    print(f"Steps/Epoch: {STEP_COUNT}")
 
-    # Create the model using the unet function
-    model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=loss_function, metrics=['accuracy', dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
-    model.summary()
-    
-    # Train the model on all available devices
-    model.fit(model_fit_gen,
-                steps_per_epoch=STEP_COUNT,
-                epochs=EPOCHS,
-                validation_data=(validation_x, validation_y),
-                callbacks=callbacks)
+    # Open strategy scope
+    with strategy.scope():
+
+        # Check if the chosen optimizer is available
+        if OPTIMIZER == 'adam':
+            optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)
+        elif OPTIMIZER == 'nadam':
+            optimizer = tf.keras.optimizers.Nadam(learning_rate=LEARNING_RATE)
+        elif OPTIMIZER == 'rms':
+            optimizer = tf.keras.optimizers.RMSprop(learning_rate=LEARNING_RATE)
+        else:
+            raise ValueError(f"Invalid optimizer type. Available optimizers are 'adam', 'nadam', and 'rms'.")
+
+        # Check if the chosen loss function is available
+        if LOSS_FUNCTION == 'dice_loss':
+            loss_function = dice_loss
+        elif LOSS_FUNCTION == 'bce_loss':
+            loss_function = bce_loss
+        elif LOSS_FUNCTION == 'dice_bce_loss':
+            loss_function = dice_bce_loss
+        elif LOSS_FUNCTION == 'ioe_loss':
+            loss_function = iou_loss
+        else:
+            raise ValueError(f"Invalid loss function. Available loss functions are 'dice_loss', 'bce_loss', 'dice_bce_loss', and 'ioe_loss'.")
+
+        balanced_df = prepare_balanced_dataset()
+        train_ids, validation_ids = train_test_split(balanced_df, test_size=VALIDATION_TEST_SIZE, stratify=balanced_df['ship_count'])
+
+        train_df = pd.merge(balanced_df, train_ids)
+        validation_df = pd.merge(balanced_df, validation_ids)
+
+        # Create an augmented generator for model fitting
+        # model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH, random_seed=42))
+
+        train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False)
+
+        # validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
+        # validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
+
+        validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False)
+
+        # Calculate the number of steps per epoch
+        STEP_COUNT = len(train_data_generator)
+
+        # Define callbacks for training
+        tensorboard = TensorBoard(log_dir='logs')
+
+        earlystopping = EarlyStopping(
+            monitor="val_dice_score",
+            mode="max",
+            patience=EARLY_STOPPING_PATIENCE)
+
+        # Check if WEIGHTS_DIR exists, if not create it
+        if not os.path.exists(MODEL_DIR):
+            os.makedirs(MODEL_DIR)
+
+        MODEL_FILE = 'model.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
+
+        MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILE)
+
+        model_path = MODEL_PATH
+        checkpoint = ModelCheckpoint(
+            filepath=model_path,
+            monitor='val_dice_score',
+            verbose=1,
+            mode='max',
+            save_weights_only=False)
+
+        reduceLR = ReduceLROnPlateau(
+            monitor='val_dice_score',
+            factor=REDUCE_LR_FACTOR,
+            patience=REDUCE_LR_PATIENCE,
+            verbose=1,
+            mode='max',
+            min_delta=REDUCE_LR_MIN_DELTA,
+            cooldown=REDUCE_LR_COOLDOWN,
+            min_lr=REDUCE_LR_MIN_LR)
+
+        callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
+
+        # Create a MirroredStrategy for distributed training
+        strategy = tf.distribute.MirroredStrategy()
+        print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+        print(f"The size of the training set: {train_df.shape[0]}")
+        print(f"The size of the validation set: {validation_df.shape[0]}")
+        print(f"Steps/Epoch: {STEP_COUNT}")
+
+        # Create the model using the unet function
+        model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=loss_function, metrics=['accuracy', dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
+        model.summary()
+        
+        # Train the model on all available devices
+        model.fit(train_data_generator,
+                  steps_per_epoch=len(train_data_generator),
+                  epochs=EPOCHS,
+                  validation_data=validation_data_generator,
+                  validation_steps=len(validation_data_generator),
+                  callbacks=callbacks)
+
+        # model.fit(train_generator, epochs=10, steps_per_epoch=len(train_generator), validation_data=val_generator, validation_steps=len(val_generator))
+
+    exit(1)
+
