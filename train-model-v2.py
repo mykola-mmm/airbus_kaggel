@@ -157,7 +157,7 @@ if __name__ == '__main__':
         # Create an augmented generator for model fitting
         # model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH, random_seed=42))
 
-        train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False)
+        train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True)
 
         # validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
         # validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
@@ -221,8 +221,6 @@ if __name__ == '__main__':
                   validation_data=validation_data_generator,
                   validation_steps=len(validation_data_generator),
                   callbacks=callbacks)
-
-        # model.fit(train_generator, epochs=10, steps_per_epoch=len(train_generator), validation_data=val_generator, validation_steps=len(val_generator))
 
     exit(1)
 
