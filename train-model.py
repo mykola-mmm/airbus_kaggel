@@ -73,7 +73,7 @@ def parse_args():
     parser.add_argument('--gaussian_noise', type=float, default=0.1, help='Standard deviation of Gaussian noise')
     parser.add_argument('--num_filters', type=int, default=16, help='Number of filters for convolutional layers')
     parser.add_argument('--dataset_path', type=str, default='airbus-ship-detection/train_v2', help='Path to the dataset')
-    parser.add_argument('--csv_file', type=str, default='airbus-ship-detection/dataset.csv', help='Path to the CSV file')
+    parser.add_argument('--csv_file', type=str, default='df.csv', help='Path to the CSV file')
     parser.add_argument('--patch_size', type=int, default=768, help='Size to which training images will be resized')
     parser.add_argument('--model_dir', type=str, default='models', help='Directory where models will be saved')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
@@ -162,8 +162,6 @@ if __name__ == '__main__':
     # Check if WEIGHTS_DIR exists, if not create it
     if not os.path.exists(MODEL_DIR):
         os.makedirs(MODEL_DIR)
-
-    # MODEL_FILE = 'model_{PATCH_SIZE}x{PATCH_SIZE}.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
 
     MODEL_FILE = 'model.epoch{epoch:02d}-val_dice_score{val_dice_score:.3f}.keras'
 
