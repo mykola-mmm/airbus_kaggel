@@ -86,7 +86,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         :return: decoded mask resized to self.training_image_size
         """
         if pd.isnull(rle):
-            return np.zeros((*self.training_image_size, 1), dtype=np.float32)
+            return np.zeros(*self.training_image_size, dtype=np.float32)
         s = rle.split()
         starts, lengths = [np.asarray(x, dtype=int) for x in (s[0::2], s[1::2])]
         starts -= 1
