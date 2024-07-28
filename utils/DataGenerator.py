@@ -57,14 +57,12 @@ class DataGenerator(tf.keras.utils.Sequence):
         """
         X = np.empty((self.batch_size, *self.training_image_size, 3), dtype=np.float32)
         y = np.empty((self.batch_size, *self.training_image_size, 1), dtype=np.float32)
-
         for i, (_, row) in enumerate(batch_data.iterrows()):
             image_path = os.path.join(self.image_dir, row['ImageId'])
             image = self.__load_image(image_path)
             mask = self.__rle_decode(row['AllEncodedPixels'])
-
             X[i,] = image
-            y[i,] = mask[..., np.newaxis]
+            y[i,] = mask
 
         return X, y
 
@@ -86,18 +84,19 @@ class DataGenerator(tf.keras.utils.Sequence):
         :return: decoded mask resized to self.training_image_size
         """
         if pd.isnull(rle):
-            return np.zeros(*self.training_image_size, dtype=np.float32)
+            return np.zeros(shape=(*self.training_image_size, 1), dtype=np.float32)
         s = rle.split()
         starts, lengths = [np.asarray(x, dtype=int) for x in (s[0::2], s[1::2])]
         starts -= 1
         ends = starts + lengths
-        img = np.zeros(self.default_image_size[0] * self.default_image_size[1], dtype=np.uint8)
+        img = np.zeros(self.default_image_size[0] * self.default_image_size[1], dtype=np.float32)
         for lo, hi in zip(starts, ends):
             img[lo:hi] = 1
         mask = img.reshape(self.default_image_size).T
         
         # Resize mask to the training image size
         mask_resized = cv2.resize(mask, self.training_image_size)
+        mask_resized = mask_resized[:, :, np.newaxis]
         return mask_resized
 
 # Usage example:
