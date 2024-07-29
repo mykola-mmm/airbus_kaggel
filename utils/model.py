@@ -2,6 +2,7 @@ from tensorflow.keras import layers, Model, Input
 
 
 def unet(input_shape, optimizer, loss, metrics, gaussian_noise, dropout, num_filters):
+    # Inputs
     inputs = Input((None, None, 3))
     inputs = layers.GaussianNoise(gaussian_noise)(inputs)
     inputs = layers.BatchNormalization()(inputs)
