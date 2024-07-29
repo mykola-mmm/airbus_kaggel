@@ -5,7 +5,7 @@ import cv2  # For image processing
 import os
 
 class DataGenerator(tf.keras.utils.Sequence):
-    def __init__(self, dataframe, image_dir, batch_size=32, default_image_size=(768, 768), training_image_size=(768, 768), shuffle=True):
+    def __init__(self, dataframe, image_dir, batch_size=32, default_image_size=(768, 768), training_image_size=(768, 768), shuffle=True, **kwargs):
         """
         Initialization
         :param dataframe: pandas dataframe with columns 'ImageId' and 'AllEncodedPixels'
@@ -15,6 +15,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         :param training_image_size: size to which images and masks are resized for training
         :param shuffle: whether to shuffle the data after each epoch
         """
+        super().__init__(**kwargs)
         self.dataframe = dataframe
         self.image_dir = image_dir
         self.batch_size = batch_size
