@@ -208,7 +208,7 @@ if __name__ == '__main__':
         print(f"Steps/Epoch: {STEP_COUNT}")
 
         # Create the model using the unet function
-        model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=loss_function, metrics=['accuracy', dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
+        model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=loss_function, metrics=[dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
         model.summary()
         
     # Train the model on all available devices
