@@ -203,9 +203,6 @@ if __name__ == '__main__':
 
         callbacks = [tensorboard, earlystopping, checkpoint, reduceLR]
 
-        # Create a MirroredStrategy for distributed training
-        strategy = tf.distribute.MirroredStrategy()
-        print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
         print(f"The size of the training set: {train_df.shape[0]}")
         print(f"The size of the validation set: {validation_df.shape[0]}")
         print(f"Steps/Epoch: {STEP_COUNT}")
