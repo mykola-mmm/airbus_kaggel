@@ -86,7 +86,8 @@ def parse_args():
     parser.add_argument('--reduce_lr_min_delta', type=float, default=0.0001, help='Minimum change in the monitored quantity to qualify as an improvement')
     parser.add_argument('--reduce_lr_cooldown', type=int, default=2, help='Number of epochs to wait before resuming normal operation after lr has been reduced')
     parser.add_argument('--reduce_lr_min_lr', type=float, default=1e-6, help='Lower bound on the learning rate')
-    parser.add_argument('--debug-datagen', type=int, default=0, help='Debug flag for data generator')
+    parser.add_argument('--debug_datagen', type=int, default=0, help='Debug flag for data generator')
+    parser.add_argument('--debug_dataset', type=int, default=0, help='Debug flag for data set')
     return parser.parse_args()
 
 
@@ -156,6 +157,16 @@ if __name__ == '__main__':
         train_df = pd.merge(balanced_df, train_ids)
         validation_df = pd.merge(balanced_df, validation_ids)
 
+        if args.debug_dataset:
+            print(f"The size of the balanced dataset: {balanced_df.shape[0]}")
+            print(f"Value count of 'has_ship' column in balanced dataset:\n{balanced_df['has_ship'].value_counts()}")
+            print(f"The size of the training set: {train_df.shape[0]}")
+            print(f"Value count of 'has_ship' column in training set:\n{train_df['has_ship'].value_counts()}")
+            print(f"The size of the validation set: {validation_df.shape[0]}")
+            print(f"Value count of 'has_ship' column in validation set:\n{validation_df['has_ship'].value_counts()}")
+            print(f"Train set: {train_df}")
+            print(f"Validation set: {validation_df}")
+
         # Create an augmented generator for model fitting
         # model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH, random_seed=42))
 
@@ -175,15 +186,15 @@ if __name__ == '__main__':
                 plt.show()
             exit(1)
 
-        # train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True, workers=strategy.num_replicas_in_sync, use_multiprocessing=True)
-        train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True)
+        train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True, workers=strategy.num_replicas_in_sync, use_multiprocessing=True)
+        # train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True)
 
 
         # validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
         # validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
 
-        # validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False, workers=strategy.num_replicas_in_sync,use_multiprocessing=True)
-        validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False)
+        validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False, workers=strategy.num_replicas_in_sync,use_multiprocessing=True)
+        # validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False)
 
         # Calculate the number of steps per epoch
         STEP_COUNT = len(train_data_generator)
