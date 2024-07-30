@@ -86,6 +86,7 @@ def parse_args():
     parser.add_argument('--reduce_lr_min_delta', type=float, default=0.0001, help='Minimum change in the monitored quantity to qualify as an improvement')
     parser.add_argument('--reduce_lr_cooldown', type=int, default=2, help='Number of epochs to wait before resuming normal operation after lr has been reduced')
     parser.add_argument('--reduce_lr_min_lr', type=float, default=1e-6, help='Lower bound on the learning rate')
+    parser.add_argument('--debug-datagen', type=int, default=0, help='Debug flag for data generator')
     return parser.parse_args()
 
 
@@ -115,14 +116,15 @@ if __name__ == '__main__':
     REDUCE_LR_COOLDOWN = args.reduce_lr_cooldown
     REDUCE_LR_MIN_LR = args.reduce_lr_min_lr
 
-    #TODO: Add later
-    # BATCH_SIZE_PER_REPLICA = 64
-    # BATCH_SIZE = BATCH_SIZE_PER_REPLICA * strategy.num_replicas_in_sync
+
 
     # Set up MirroredStrategy
     strategy = tf.distribute.MirroredStrategy()
     print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
 
+    #TODO: Add later
+    # BATCH_SIZE_PER_REPLICA = 64
+    BATCH_SIZE_PER_WORKER = BATCH_SIZE * strategy.num_replicas_in_sync
     # Open strategy scope
     with strategy.scope():
 
@@ -157,12 +159,31 @@ if __name__ == '__main__':
         # Create an augmented generator for model fitting
         # model_fit_gen = augmentation_generator(img_gen(train_df, BATCH_SIZE, PATCH_SIZE, train_img_dir=DATASET_PATH, random_seed=42))
 
-        train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True, workers=strategy.num_replicas_in_sync,use_multiprocessing=True)
+        if args.debug_datagen:
+            train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False)
+            for i in range(10):
+                X, y = train_data_generator.__getitem__(i)
+                print(f"Batch {i}: X.shape = {X.shape}, y.shape = {y.shape}")
+                import matplotlib.pyplot as plt
+
+                # Display X and Y on the same subplot
+                fig, axes = plt.subplots(1, 2)
+                axes[0].imshow(X[0])
+                axes[0].set_title('X')
+                axes[1].imshow(y[0])
+                axes[1].set_title('Y')
+                plt.show()
+            exit(1)
+
+        # train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True, workers=strategy.num_replicas_in_sync, use_multiprocessing=True)
+        train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True)
+
 
         # validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
         # validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
 
-        validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False, workers=strategy.num_replicas_in_sync,use_multiprocessing=True)
+        # validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False, workers=strategy.num_replicas_in_sync,use_multiprocessing=True)
+        validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False)
 
         # Calculate the number of steps per epoch
         STEP_COUNT = len(train_data_generator)
