@@ -246,13 +246,13 @@ if __name__ == '__main__':
         model = unet(INPUT_DATA_DIM, optimizer=optimizer, loss=loss_function, metrics=[dice_score], gaussian_noise=GAUSSIAN_NOISE, dropout=DROPOUT, num_filters=NUM_FILTERS)
         model.summary()
         
-    # Train the model on all available devices
-    model.fit(train_data_generator,
-            #   steps_per_epoch=len(train_data_generator),
-                epochs=EPOCHS,
-                validation_data=validation_data_generator,
-            #   validation_steps=len(validation_data_generator),
-                callbacks=callbacks)
+        # Train the model on all available devices
+        model.fit(train_data_generator,
+                #   steps_per_epoch=len(train_data_generator),
+                    epochs=EPOCHS,
+                    validation_data=validation_data_generator,
+                #   validation_steps=len(validation_data_generator),
+                    callbacks=callbacks)
 
     exit(1)
 
