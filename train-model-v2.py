@@ -186,14 +186,17 @@ if __name__ == '__main__':
                 plt.show()
             exit(1)
 
-        train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True, workers=strategy.num_replicas_in_sync, use_multiprocessing=True)
+        train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True, workers=strategy.num_replicas_in_sync, use_multiprocessing=False)
+
+        # train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True, workers=strategy.num_replicas_in_sync, use_multiprocessing=True)
         # train_data_generator = DataGenerator(train_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=True)
 
 
         # validation_test_size = (balanced_df.shape[0] - train_df.shape[0])
         # validation_x, validation_y = next(img_gen(validation_df, validation_test_size, PATCH_SIZE, train_img_dir=DATASET_PATH))
 
-        validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False, workers=strategy.num_replicas_in_sync,use_multiprocessing=True)
+        validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False, workers=strategy.num_replicas_in_sync,use_multiprocessing=False)
+        # validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False, workers=strategy.num_replicas_in_sync,use_multiprocessing=True)
         # validation_data_generator = DataGenerator(validation_df, DATASET_PATH, batch_size=BATCH_SIZE_PER_WORKER, training_image_size=TRAINING_IMAGE_SIZE, shuffle=False)
 
         # Calculate the number of steps per epoch
